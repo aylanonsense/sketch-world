@@ -1,0 +1,16 @@
+body {
+	margin: 0;
+	padding: 0;
+	background-color: #fff;
+}
+canvas {
+	display: block;
+	margin: 15px auto;
+}
+#instructions {
+	color: #bbb;
+	width: 800px;
+	text-align: center;
+	margin: 0 auto;
+	font-size: 70%;
+}
