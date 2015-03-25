@@ -12,16 +12,17 @@ define([
 		this._events = new EventHelper([ 'dequeue' ]);
 		this._timer = null;
 	}
+	DelayQueue.prototype.empty = function() {
+		if(this._timer) {
+			clearTimeout(this._timer);
+		}
+		this._queue = [];
+		this._timer = null;
+	};
 	DelayQueue.prototype.enqueue = function(item, timeToDequeue) {
-		//if there is no delay, we just trigger the dequeue immediately
-		if(!timeToDequeue || timeToDequeue <= now()) {
-			this._events.trigger('dequeue', item);
-		}
-		//otherwise we put it in a queue and schedule a time for it to be dequeued
-		else {
-			this._queue.push({ time: timeToDequeue, item: item });
-			this._checkForDequeue();
-		}
+		//we put it in a queue and schedule a time for it to be dequeued
+		this._queue.push({ time: timeToDequeue, item: item });
+		this._checkForDequeue();
 	};
 	DelayQueue.prototype.on = function(eventName, callback) {
 		this._events.on(eventName, callback);

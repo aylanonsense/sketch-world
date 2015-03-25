@@ -1,19 +1,31 @@
 define([
-	'server/net/GameConnectionServer'
+	'server/net/GameConnectionServer',
+	'server/Clock'
 ], function(
-	GameConnectionServer
+	GameConnectionServer,
+	Clock
 ) {
 	GameConnectionServer.on('connect', function(conn) {
-		console.log("Connection " + conn.connId + " connected!");
+		console.log("[" + conn.connId + "] Connected!");
+		var interval = null;
+		conn.on('sync', function() {
+			console.log("[" + conn.connId + "] Synced!");
+			if(!interval) {
+				interval = setInterval(function() {
+					conn.bufferSend({ from: 'SERVER!' });
+					console.log("gameTime:", Clock.getGameTime());
+				}, 1000);
+			}
+		});
 		conn.on('receive', function(msg) {
-			console.log("Received", msg);
+			console.log("[" + conn.connId + "] Received:", msg);
 		});
 		conn.on('disconnect', function() {
-			console.log("Connection " + conn.connId + " disconnected!");
+			console.log("[" + conn.connId + "] Disconnected!");
+			if(interval) {
+				clearInterval(interval);
+			}
 		});
-		setInterval(function() {
-			conn.bufferSend({ from: 'SERVER!' });
-		}, 1000);
 	});
 	return {
 		tick: function(t) {}

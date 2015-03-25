@@ -1,18 +1,23 @@
 define([
 	'server/net/GameConnectionServer',
+	'shared/Constants',
 	'server/Constants',
+	'server/Clock',
 	'server/Game',
 	'shared/utils/now'
 ], function(
 	GameConnectionServer,
+	SharedConstants,
 	Constants,
+	Clock,
 	Game,
 	now
 ) {
 	return function() {
 		//set up the game loop
 		var prevTime = now();
-		var timeToFlush = Constants.OUTGOING_MESSAGE_BUFFER_TIME;
+		var timeToFlush = SharedConstants.OUTGOING_MESSAGE_BUFFER_TIME -
+			0.5 / Constants.TARGET_FRAME_RATE;
 		function loop() {
 			//calculate time since last loop was run
 			var time = now();
@@ -28,7 +33,8 @@ define([
 				GameConnectionServer.forEach(function(conn) {
 					conn.flush();
 				});
-				timeToFlush = Constants.OUTGOING_MESSAGE_BUFFER_TIME;
+				timeToFlush = SharedConstants.OUTGOING_MESSAGE_BUFFER_TIME -
+					0.5 / Constants.TARGET_FRAME_RATE;
 			}
 		}
 

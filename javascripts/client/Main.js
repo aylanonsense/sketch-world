@@ -1,12 +1,18 @@
 define([
 	'client/net/GameConnection',
+	'client/net/Pinger',
+	'shared/Constants',
 	'client/Constants',
 	'client/Game',
+	'client/Clock',
 	'shared/utils/now'
 ], function(
 	GameConnection,
+	Pinger,
+	SharedConstants,
 	Constants,
 	Game,
+	Clock,
 	now
 ) {
 	return function() {
@@ -21,7 +27,9 @@ define([
 
 		//set up the game loop
 		var prevTime = now();
-		var timeToFlush = Constants.OUTGOING_MESSAGE_BUFFER_TIME;
+		var timeToFlush = SharedConstants.OUTGOING_MESSAGE_BUFFER_TIME -
+			0.5 / Constants.TARGET_FRAME_RATE;
+		var timeToPing = Constants.TIME_BETWEEN_PINGS;
 		function loop() {
 			//calculate time since last loop was run
 			var time = now();
@@ -36,7 +44,15 @@ define([
 			timeToFlush -= t;
 			if(timeToFlush <= 0.0) {
 				GameConnection.flush();
-				timeToFlush = Constants.OUTGOING_MESSAGE_BUFFER_TIME;
+				timeToFlush = SharedConstants.OUTGOING_MESSAGE_BUFFER_TIME -
+					0.5 / Constants.TARGET_FRAME_RATE;
+			}
+
+			//very so often we ping the server
+			timeToPing -= t;
+			if(timeToPing <= 0.0) {
+				Pinger.ping();
+				timeToPing = Constants.TIME_BETWEEN_PINGS;
 			}
 
 			//the next loop is scheduled
@@ -77,5 +93,11 @@ define([
 
 		//connect to server
 		GameConnection.connect();
+		GameConnection.on('disconnect', function() {
+			GameConnection.reset();
+			Pinger.reset();
+			Game.reset();
+			Clock.reset();
+		});
 	};
 });

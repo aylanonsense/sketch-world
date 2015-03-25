@@ -44,6 +44,10 @@ define([
 		},
 		send: function(msg) {
 			outboundMessages.enqueue(msg, now() + generateFakeLag());
+		},
+		reset: function() {
+			inboundMessages.empty();
+			outboundMessages.empty();
 		}
 	};
 });
