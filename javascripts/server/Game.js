@@ -9,9 +9,6 @@ define([
 ) {
 	//create game entities
 	var entities = [];
-	for(var i = 0; i < 10; i++) {
-		entities.push(new Ball(100 + 600 * Math.random(), 100 + 400 * Math.random()));
-	}
 
 	function sendGameState(conn) {
 		conn.bufferSend({
@@ -25,24 +22,19 @@ define([
 	}
 
 	GameConnectionServer.on('connect', function(conn) {
-		console.log("[" + conn.connId + "] Connected!");
+		var playableEntity = new Ball(100 + 600 * Math.random(), 100 + 400 * Math.random());
+		entities.push(playableEntity);
 		conn.on('sync', function() {
-			console.log("[" + conn.connId + "] Synced!");
 			sendGameState(conn);
-		});
-		conn.on('receive', function(msg) {
-			console.log("[" + conn.connId + "] Received:", msg);
-		});
-		conn.on('desync', function(msg) {
-			console.log("[" + conn.connId + "] Desynced!");
-		});
-		conn.on('disconnect', function() {
-			console.log("[" + conn.connId + "] Disconnected!");
+			conn.bufferSend({
+				messageType: 'grant-entity-ownership',
+				entityId: playableEntity.entityId
+			});
 		});
 	});
 	return {
 		tick: function(t) {
-			for(var i = 0; i < entities[i].length; i++) {
+			for(var i = 0; i < entities.length; i++) {
 				entities[i].tick(t);
 			}
 		}

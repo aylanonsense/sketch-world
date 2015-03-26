@@ -1,5 +1,5 @@
 define(function() {
 	return function() {
-		return 250 / 1000 + Math.random() * 50 / 1000; //seconds
+		return 3 / 1000 + Math.random() * 1 / 1000; //seconds
 	};
 });

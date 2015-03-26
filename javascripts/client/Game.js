@@ -10,13 +10,17 @@ define([
 	Ball
 ) {
 	var entities = [];
+	var playableEntity = null;
 
-	GameConnection.on('connect', function() {
-		console.log("Connected!");
-	});
-	GameConnection.on('sync', function() {
-		console.log("Synced!");
-	});
+	function getEntity(id) {
+		for(var i = 0; i < entities.length; i++) {
+			if(entities[i].entityId === id) {
+				return entities[i];
+			}
+		}
+		return null;
+	}
+
 	GameConnection.on('receive', function(msg) {
 		// console.log("Received:", msg);
 		if(msg.messageType === 'game-state') {
@@ -29,9 +33,9 @@ define([
 				}
 			});
 		}
-	});
-	GameConnection.on('disconnect', function() {
-		console.log("Disconnected!");
+		else if(msg.messageType === 'grant-entity-ownership') {
+			playableEntity = getEntity(msg.entityId);
+		}
 	});
 
 	return {
@@ -69,6 +73,21 @@ define([
 			}
 		},
 		onMouseEvent: function(evt) {},
-		onKeyboardEvent: function(evt, keyboard) {}
+		onKeyboardEvent: function(evt, keyboard) {
+			if(playableEntity) {
+				if(evt.key === 'MOVE_LEFT') {
+					playableEntity.setMoveDirX(evt.isDown ? -1 : (keyboard.MOVE_RIGHT ? 1 : 0));
+				}
+				else if(evt.key === 'MOVE_RIGHT') {
+					playableEntity.setMoveDirX(evt.isDown ? 1 : (keyboard.MOVE_LEFT ? -1 : 0));
+				}
+				else if(evt.key === 'MOVE_UP') {
+					playableEntity.setMoveDirY(evt.isDown ? -1 : (keyboard.MOVE_DOWN ? 1 : 0));
+				}
+				else if(evt.key === 'MOVE_DOWN') {
+					playableEntity.setMoveDirY(evt.isDown ? 1 : (keyboard.MOVE_UP ? -1 : 0));
+				}
+			}
+		}
 	};
 });

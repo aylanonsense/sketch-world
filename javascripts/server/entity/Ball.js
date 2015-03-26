@@ -10,7 +10,7 @@ define([
 			x: x,
 			y: y,
 			radius: 25,
-			color: '#f00',
+			color: '#90f',
 			targetX: null,
 			targetY: null,
 			targetMoveDirX: null,

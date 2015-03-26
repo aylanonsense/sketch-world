@@ -15,6 +15,7 @@ define([
 	function GameConnection(socket) {
 		var self = this;
 		this.connId = nextConnId++;
+		this.gameData = {};
 		this._bufferedMessagesToSend = [];
 		this._isConnected = true;
 		this._isSynced = false;
