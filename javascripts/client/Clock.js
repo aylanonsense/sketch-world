@@ -47,6 +47,7 @@ define([
 		reset: function() {
 			gameTimeOffset = 0.0;
 			roundTripTime = 0.0;
-		}
+		},
+		speed: 1.0 //not actually used in this module, just stored here for debug uses
 	};
 });

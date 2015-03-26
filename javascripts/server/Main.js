@@ -16,7 +16,7 @@ define([
 	return function() {
 		//set up the game loop
 		var prevTime = now();
-		var timeToFlush = SharedConstants.OUTGOING_MESSAGE_BUFFER_TIME -
+		var timeToFlush = SharedConstants.SERVER_OUTGOING_MESSAGE_BUFFER_TIME -
 			0.5 / Constants.TARGET_FRAME_RATE;
 		function loop() {
 			//calculate time since last loop was run
@@ -31,9 +31,11 @@ define([
 			timeToFlush -= t;
 			if(timeToFlush <= 0.0) {
 				GameConnectionServer.forEach(function(conn) {
-					conn.flush();
+					if(conn.isConnected() && conn.isSynced()) {
+						conn.flush();
+					}
 				});
-				timeToFlush = SharedConstants.OUTGOING_MESSAGE_BUFFER_TIME -
+				timeToFlush = SharedConstants.SERVER_OUTGOING_MESSAGE_BUFFER_TIME -
 					0.5 / Constants.TARGET_FRAME_RATE;
 			}
 		}

@@ -26,33 +26,99 @@ define([
 		Game.reset();
 
 		//set up the game loop
+		var syncedSimTimePassed = 0.0;
+		var gameTimePassed = 0.0;
+		var simTimeAdjustDir = 0;
 		var prevTime = now();
-		var timeToFlush = SharedConstants.OUTGOING_MESSAGE_BUFFER_TIME -
+		var prevClientGameTime = null;
+		var timeToFlush = SharedConstants.CLIENT_OUTGOING_MESSAGE_BUFFER_TIME -
 			0.5 / Constants.TARGET_FRAME_RATE;
-		var timeToPing = Constants.TIME_BETWEEN_PINGS;
+		var timeToPing = 0.0;
 		function loop() {
 			//calculate time since last loop was run
 			var time = now();
 			var t = time - prevTime;
 			prevTime = time;
 
-			//the game moves forward ~one frame
-			Game.tick(t);
-			Game.render(ctx);
+			//if we're connected, we might face a circumstance where the network gets worse/better,
+			// in which case we'll adjust the speed of the simulation until it matches the game time
+			var tSim = t;
+			if(GameConnection.isConnected() && GameConnection.isSynced()) {
+				//we might need to adjust the sim time
+				//if we're moving faster than normal, we may want to return to normal speed
+				if(simTimeAdjustDir === 1 && syncedSimTimePassed >= gameTimePassed) {
+					simTimeAdjustDir = 0;
+					Clock.speed = 1.0; //for debug purposes
+				}
+				//if we're moving slower than normal, we may want to return to normal speed
+				else if(simTimeAdjustDir === -1 && syncedSimTimePassed <= gameTimePassed) {
+					simTimeAdjustDir = 0;
+					Clock.speed = 1.0; //for debug purposes
+				}
+				//if we're way behind, we may want to speed up
+				else if(syncedSimTimePassed < gameTimePassed - Constants.TIME_REQUIRED_TO_SPEED_UP_SIM) {
+					simTimeAdjustDir = 1;
+					Clock.speed = Constants.SPEED_UP_SIM_MULT; //for debug purposes
+				}
+				//if we're way ahead, we may want to slow down
+				else if(syncedSimTimePassed > gameTimePassed + Constants.TIME_REQUIRED_TO_SLOW_DOWN_SIM) {
+					simTimeAdjustDir = -1;
+					Clock.speed = Constants.SLOW_DOWN_SIM_MULT; //for debug purposes
+				}
 
-			//every couple of frames any buffered messages are sent to the server
-			timeToFlush -= t;
-			if(timeToFlush <= 0.0) {
-				GameConnection.flush();
-				timeToFlush = SharedConstants.OUTGOING_MESSAGE_BUFFER_TIME -
-					0.5 / Constants.TARGET_FRAME_RATE;
+				//adjust the sim time passed accordingly
+				if(simTimeAdjustDir === 1) {
+					tSim *= Constants.SPEED_UP_SIM_MULT;
+				}
+				else if(simTimeAdjustDir === -1) {
+					tSim *= Constants.SLOW_DOWN_SIM_MULT;
+				}
+				syncedSimTimePassed += tSim;
+
+				//calculate the actual game time passed
+				var clientGameTime = Clock.getClientGameTime();
+				if(prevClientGameTime !== null) {
+					if(clientGameTime > prevClientGameTime) {
+						gameTimePassed += clientGameTime - prevClientGameTime;
+						prevClientGameTime = clientGameTime;
+					}
+				}
+				else {
+					prevClientGameTime = clientGameTime;
+				}
+
+				//finally, if we really get way out of sync, we may need to strategically reset
+				if(Math.abs(gameTimePassed - syncedSimTimePassed) > Constants.TIME_REQUIRED_TO_RESET) {
+					console.log("Resetting due to major desync!");
+					Game.tick(tSim);
+					Game.render(ctx);
+					reset();
+					requestAnimationFrame(loop);
+					return;
+				}
 			}
 
-			//very so often we ping the server
-			timeToPing -= t;
-			if(timeToPing <= 0.0) {
-				Pinger.ping();
-				timeToPing = Constants.TIME_BETWEEN_PINGS;
+			//the game moves forward ~one frame
+			Game.tick(tSim);
+			Game.render(ctx);
+
+			if(GameConnection.isConnected()) {
+				if(GameConnection.isSynced()) {
+					//every couple of frames any buffered messages are sent to the server
+					timeToFlush -= t;
+					if(timeToFlush <= 0.0) {
+						GameConnection.flush();
+						timeToFlush = SharedConstants.CLIENT_OUTGOING_MESSAGE_BUFFER_TIME -
+							0.5 / Constants.TARGET_FRAME_RATE;
+					}
+				}
+
+				//every so often we ping the server
+				timeToPing -= t;
+				if(timeToPing <= 0.0) {
+					Pinger.ping();
+					timeToPing = Constants.TIME_BETWEEN_PINGS;
+				}
 			}
 
 			//the next loop is scheduled
@@ -93,11 +159,28 @@ define([
 
 		//connect to server
 		GameConnection.connect();
-		GameConnection.on('disconnect', function() {
+		GameConnection.on('sync', function() {
+			syncedSimTimePassed = 0.0;
+			gameTimePassed = 0.0;
+			simTimeAdjustDir = 0;
+			Clock.speed = 1.0; //for debug purposes
+		});
+		GameConnection.on('disconnect', reset);
+
+		//helpful methods
+		function reset() {
+			syncedSimTimePassed = 0.0;
+			gameTimePassed = 0.0;
+			simTimeAdjustDir = 0;
+			Clock.speed = 1.0; //for debug purposes
+			prevClientGameTime = null;
+			timeToFlush = SharedConstants.CLIENT_OUTGOING_MESSAGE_BUFFER_TIME -
+				0.5 / Constants.TARGET_FRAME_RATE;
+			timeToPing = 0.0;
 			GameConnection.reset();
 			Pinger.reset();
 			Game.reset();
 			Clock.reset();
-		});
+		}
 	};
 });

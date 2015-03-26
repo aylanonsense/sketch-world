@@ -31,7 +31,7 @@ define([
 					var roundTripTime = pings[i].received - pings[i].sent;
 
 					//see if we can't gain a better estimate of server time
-					var minGameTime = gameTime - roundTripTime;
+					var minGameTime = gameTime;
 					var maxGameTime = gameTime + roundTripTime;
 					var offsetChanged = false;
 					if(minServerTimeOffset === null || minServerTimeOffset < minGameTime - time) {
@@ -53,8 +53,8 @@ define([
 
 					//we only need one ping response to qualify as "synced"
 					if(!isSynced) {
-						events.trigger('sync');
 						isSynced = true;
+						events.trigger('sync');
 					}
 					break;
 				}
@@ -66,7 +66,9 @@ define([
 		pingsSinceRoundTripTimeLowered++;
 
 		//create sorted list of client --> server --> client times (highest time first)
-		var latencies = pings.map(function(ping) {
+		var latencies = pings.filter(function(ping) {
+			return ping.received !== null;
+		}).map(function(ping) {
 			return ping.received - ping.sent;
 		}).sort(function(a, b) { return b - a; });
 

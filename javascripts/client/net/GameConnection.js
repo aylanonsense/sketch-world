@@ -16,12 +16,12 @@ define([
 	var bufferedMessagesToSend = [];
 	var isConnected = false;
 	var isSynced = false;
-	var events = new EventHelper([ 'connect', 'sync', 'receive', 'disconnect' ]);
+	var events = new EventHelper([ 'connect', 'sync', 'receive', 'desync', 'disconnect' ]);
 
 	//when we receive messages early we want to delay them until they are on time
 	var messagesReceivedEarly = new DelayQueue();
 	messagesReceivedEarly.on('dequeue', function(msg) {
-		events.trigger('receive', msg);
+		events.trigger('receive', msg.actualMessage);
 	});
 
 	//bind events off of the raw connection
@@ -67,11 +67,10 @@ define([
 				console.error("Cannot buffer send while disconnected!");
 			}
 			else if(!isSynced) {
-				console.error("Cannot buffer send pre sync!");
+				console.error("Cannot buffer send while desynced!");
 			}
 			else {
-				msg.gameTime = Clock.getServerGameTime();
-				bufferedMessagesToSend.push(msg);
+				bufferedMessagesToSend.push({ actualMessage: msg, gameTime: Clock.getServerGameTime() });
 			}
 		},
 		flush: function() {
@@ -79,7 +78,7 @@ define([
 				console.error("Cannot flush while disconnected!");
 			}
 			else if(!isSynced) {
-				console.error("Cannot flush pre sync!");
+				console.error("Cannot flush while desynced!");
 			}
 			else {
 				if(bufferedMessagesToSend.length > 0) {
@@ -93,8 +92,13 @@ define([
 		},
 		reset: function() {
 			bufferedMessagesToSend = [];
-			isConnected = false;
-			isSynced = false;
+			if(isSynced) {
+				isSynced = false;
+				if(isConnected) {
+					events.trigger('desync');
+					RawConnection.send({ messageType: 'desynced' });
+				}
+			}
 			messagesReceivedEarly.empty();
 			RawConnection.reset();
 		}

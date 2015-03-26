@@ -18,12 +18,12 @@ define([
 		this._bufferedMessagesToSend = [];
 		this._isConnected = true;
 		this._isSynced = false;
-		this._events = new EventHelper([ 'sync', 'receive', 'disconnect' ]);
+		this._events = new EventHelper([ 'sync', 'receive', 'desync', 'disconnect' ]);
 
 		//when we receive messages early we want to delay them until they are on time
 		this._messagesReceivedEarly = new DelayQueue();
 		this._messagesReceivedEarly.on('dequeue', function(msg) {
-			self._events.trigger('receive', msg);
+			self._events.trigger('receive', msg.actualMessage);
 		});
 
 		//bind events off of the raw connection
@@ -40,6 +40,12 @@ define([
 				self._isSynced = true;
 				self._events.trigger('sync');
 			}
+			else if(msg.messageType === 'desynced') {
+				self._isSynced = false;
+				self._bufferedMessagesToSend = [];
+				self._messagesReceivedEarly.empty();
+				self._events.trigger('desync');
+			}
 			else if(msg.messageType === 'game-messages') {
 				for(var i = 0; i < msg.messages.length; i++) {
 					self._messagesReceivedEarly.enqueue(msg.messages[i],
@@ -49,6 +55,8 @@ define([
 		});
 		this.rawConn.on('disconnect', function() {
 			self._isConnected = false;
+			self._bufferedMessagesToSend = [];
+			self._messagesReceivedEarly.empty();
 			self._events.trigger('disconnect');
 		});
 	}
@@ -66,19 +74,18 @@ define([
 	};
 	GameConnection.prototype.bufferSend = function(msg) {
 		if(!this._isSynced) {
-			console.log("[" + this.connId + "] Cannot buffer send pre-sync!");
+			console.log("[" + this.connId + "] Cannot buffer send while desynced!");
 		}
 		else if(!this._isConnected) {
 			console.log("[" + this.connId + "] Cannot buffer send while disconnected!");
 		}
 		else {
-			msg.gameTime = Clock.getGameTime();
-			this._bufferedMessagesToSend.push(msg);
+			this._bufferedMessagesToSend.push({ actualMessage: msg, gameTime: Clock.getGameTime() });
 		}
 	};
 	GameConnection.prototype.flush = function() {
 		if(!this._isSynced) {
-			console.log("[" + this.connId + "] Cannot flush pre-sync!");
+			console.log("[" + this.connId + "] Cannot flush while desynced!");
 		}
 		else if(!this._isConnected) {
 			console.log("[" + this.connId + "] Cannot flush while disconnected!");
