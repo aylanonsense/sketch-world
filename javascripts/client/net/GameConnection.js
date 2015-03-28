@@ -19,10 +19,7 @@ define([
 	var events = new EventHelper([ 'connect', 'sync', 'receive', 'desync', 'disconnect' ]);
 
 	//when we receive messages early we want to delay them until they are on time
-	var messagesReceivedEarly = new DelayQueue();
-	messagesReceivedEarly.on('dequeue', function(msg) {
-		events.trigger('receive', msg.actualMessage);
-	});
+	var messagesReceivedEarly = [];
 
 	//bind events off of the raw connection
 	RawConnection.on('connect', function() {
@@ -32,8 +29,7 @@ define([
 	RawConnection.on('receive', function(msg) {
 		if(msg.messageType === 'game-messages') {
 			for(var i = 0; i < msg.messages.length; i++) {
-				messagesReceivedEarly.enqueue(msg.messages[i],
-					now() + msg.messages[i].gameTime - Clock.getClientGameTime());
+				messagesReceivedEarly.push(msg.messages[i]);
 			}
 		}
 	});
@@ -70,7 +66,11 @@ define([
 				console.error("Cannot buffer send while desynced!");
 			}
 			else {
-				bufferedMessagesToSend.push({ actualMessage: msg, gameTime: Clock.getServerGameTime() });
+				bufferedMessagesToSend.push({
+					actualMessage: msg,
+					gameTime: Clock.getServerGameTime(),
+					frame: Clock.getServerFrame()
+				});
 			}
 		},
 		flush: function() {
@@ -90,6 +90,18 @@ define([
 				}
 			}
 		},
+		receiveMessages: function() {
+			while(messagesReceivedEarly.length > 0 &&
+				messagesReceivedEarly[0].frame <= Clock.getFrame()) {
+				var msg = messagesReceivedEarly.shift();
+				var framesLate = (Clock.getFrame() - msg.frame);
+				if(framesLate !== 0) {
+					console.log("Message received " + framesLate +
+						(framesLate > 1 ? " frames" : " frame") + " late!");
+				}
+				events.trigger('receive', msg.actualMessage);
+			}
+		},
 		reset: function() {
 			bufferedMessagesToSend = [];
 			if(isSynced) {
@@ -99,7 +111,7 @@ define([
 					RawConnection.send({ messageType: 'desynced' });
 				}
 			}
-			messagesReceivedEarly.empty();
+			messagesReceivedEarly = [];
 			RawConnection.reset();
 		}
 	};

@@ -20,11 +20,8 @@ define([
 		this._isSynced = false;
 		this._events = new EventHelper([ 'sync', 'receive', 'desync', 'disconnect' ]);
 
-		//when we receive messages early we want to delay them until they are on time
-		this._messagesReceivedEarly = new DelayQueue();
-		this._messagesReceivedEarly.on('dequeue', function(msg) {
-			self._events.trigger('receive', msg.actualMessage);
-		});
+		//when we receive messages early we want to delay them until the correct frame
+		this._messagesReceivedEarly = [];
 
 		//bind events off of the raw connection
 		this.rawConn = new RawConnection(socket);
@@ -34,7 +31,8 @@ define([
 					self.rawConn.send({
 						messageType: 'ping-response',
 						pingId: msg.pingId,
-						gameTime: Clock.getGameTime()
+						gameTime: Clock.getGameTime(),
+						frame: Clock.getFrame()
 					});
 				}
 				else if(msg.messageType === 'synced') {
@@ -44,13 +42,12 @@ define([
 				else if(msg.messageType === 'desynced') {
 					self._isSynced = false;
 					self._bufferedMessagesToSend = [];
-					self._messagesReceivedEarly.empty();
+					self._messagesReceivedEarly = [];
 					self._events.trigger('desync');
 				}
 				else if(msg.messageType === 'game-messages') {
 					for(var i = 0; i < msg.messages.length; i++) {
-						self._messagesReceivedEarly.enqueue(msg.messages[i],
-							now() + msg.messages[i].gameTime - Clock.getGameTime());
+						self._messagesReceivedEarly.push(msg.messages[i]);
 					}
 				}
 			}
@@ -58,7 +55,7 @@ define([
 		this.rawConn.on('disconnect', function() {
 			self._isConnected = false;
 			self._bufferedMessagesToSend = [];
-			self._messagesReceivedEarly.empty();
+			self._messagesReceivedEarly = [];
 			self._events.trigger('disconnect');
 		});
 	}
@@ -74,6 +71,18 @@ define([
 	GameConnection.prototype.on = function(eventName, callback) {
 		this._events.on(eventName, callback);
 	};
+	GameConnection.prototype.receiveMessages = function() {
+		while(this._messagesReceivedEarly.length > 0 &&
+			this._messagesReceivedEarly[0].frame <= Clock.getFrame()) {
+			var msg = this._messagesReceivedEarly.shift();
+			var framesLate = (Clock.getFrame() - msg.frame);
+			if(framesLate !== 0) {
+				console.log("Message received " + framesLate +
+					(framesLate > 1 ? " frames" : " frame") + " late!");
+			}
+			this._events.trigger('receive', msg.actualMessage);
+		}
+	};
 	GameConnection.prototype.bufferSend = function(msg) {
 		if(!this._isSynced) {
 			console.log("[" + this.connId + "] Cannot buffer send while desynced!");
@@ -82,7 +91,11 @@ define([
 			console.log("[" + this.connId + "] Cannot buffer send while disconnected!");
 		}
 		else {
-			this._bufferedMessagesToSend.push({ actualMessage: msg, gameTime: Clock.getGameTime() });
+			this._bufferedMessagesToSend.push({
+				actualMessage: msg,
+				gameTime: Clock.getGameTime(),
+				frame: Clock.getFrame()
+			});
 		}
 	};
 	GameConnection.prototype.flush = function() {

@@ -45,6 +45,7 @@ define([
 	var level = new Level();
 
 	GameConnection.on('receive', function(msg) {
+		// console.log("Received:", msg);
 		if(msg.messageType === 'game-state') {
 			entities = [];
 			msg.state.entities.forEach(spawnEntity);
@@ -67,6 +68,12 @@ define([
 			getEntity(msg.entityId).onInputFromServer(msg.input, msg.details);
 		}
 	});
+
+	setInterval(function() {
+		if(GameConnection.isConnected() && GameConnection.isSynced()) {
+			GameConnection.bufferSend("BWOMP");
+		}
+	}, 1000);
 
 	return {
 		reset: function() {

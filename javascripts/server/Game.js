@@ -45,6 +45,7 @@ define([
 			});
 		});
 		conn.on('sync', function() {
+			// console.log("[" + conn.connId + "] Synced!");
 			conn.bufferSend({
 				messageType: 'game-state',
 				state: {
@@ -57,11 +58,13 @@ define([
 			});
 		});
 		conn.on('receive', function(msg) {
+			// console.log("[" + conn.connId + "] Received:", msg);
 			if(msg.messageType === 'player-input') {
 				playableEntity.onInputFromClient(msg.input, msg.details);
 			}
 		});
 		conn.on('disconnect', function() {
+			console.log("[" + conn.connId + "] Disconnected!");
 			GameConnectionServer.forEachSynced(function(conn) {
 				conn.bufferSend({
 					messageType: 'despawn-entity',

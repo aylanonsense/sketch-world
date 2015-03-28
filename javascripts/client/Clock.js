@@ -5,8 +5,20 @@ define([
 	SharedConstants,
 	now
 ) {
+	var baseFrame = 0;
+	var frameOffset = 0;
 	var gameTimeOffset = 0.0;
 	var roundTripTime = 0.0;
+
+	function getFrame() {
+		return baseFrame + frameOffset;
+	}
+	function getClientFrame() {
+		return getFrame() - Math.ceil(getTimeFromServerToClient() / SharedConstants.TARGET_FRAME_RATE);
+	}
+	function getServerFrame() {
+		return getFrame() + Math.ceil(getTimeFromClientToServer() / SharedConstants.TARGET_FRAME_RATE);
+	}
 
 	//game time is the same on the server and the client
 	// i.e. if the server is at gameTime=5.00 every client should be at gameTime=5.00 too
@@ -35,6 +47,18 @@ define([
 	}
 
 	return {
+		getFrame: getFrame,
+		getBaseFrame: function() {
+			return baseFrame;
+		},
+		incrementFrame: function() {
+			baseFrame++;
+		},
+		getClientFrame: getClientFrame,
+		getServerFrame: getServerFrame,
+		setFrameOffset: function(offset) {
+			frameOffset = offset;
+		},
 		getGameTime: getGameTime,
 		getClientGameTime: getClientGameTime,
 		getServerGameTime: getServerGameTime,

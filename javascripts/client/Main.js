@@ -32,7 +32,7 @@ define([
 		var prevTime = now();
 		var prevClientGameTime = null;
 		var timeToFlush = SharedConstants.CLIENT_OUTGOING_MESSAGE_BUFFER_TIME -
-			0.5 / Constants.TARGET_FRAME_RATE;
+			0.5 / SharedConstants.TARGET_FRAME_RATE;
 		var timeToPing = 0.0;
 		function loop() {
 			//calculate time since last loop was run
@@ -98,8 +98,11 @@ define([
 				}
 			}
 
+			//check for incoming messages for this frame
+			GameConnection.receiveMessages();
+
 			//the game moves forward ~one frame
-			Game.tick(tSim);
+			Game.tick(1 / SharedConstants.TARGET_FRAME_RATE);
 			Game.render(ctx);
 
 			if(GameConnection.isConnected()) {
@@ -109,7 +112,7 @@ define([
 					if(timeToFlush <= 0.0) {
 						GameConnection.flush();
 						timeToFlush = SharedConstants.CLIENT_OUTGOING_MESSAGE_BUFFER_TIME -
-							0.5 / Constants.TARGET_FRAME_RATE;
+							0.5 / SharedConstants.TARGET_FRAME_RATE;
 					}
 				}
 
@@ -122,6 +125,7 @@ define([
 			}
 
 			//the next loop is scheduled
+			Clock.incrementFrame();
 			requestAnimationFrame(loop);
 		}
 
@@ -175,7 +179,7 @@ define([
 			Clock.speed = 1.0; //for debug purposes
 			prevClientGameTime = null;
 			timeToFlush = SharedConstants.CLIENT_OUTGOING_MESSAGE_BUFFER_TIME -
-				0.5 / Constants.TARGET_FRAME_RATE;
+				0.5 / SharedConstants.TARGET_FRAME_RATE;
 			timeToPing = 0.0;
 			GameConnection.reset();
 			Pinger.reset();

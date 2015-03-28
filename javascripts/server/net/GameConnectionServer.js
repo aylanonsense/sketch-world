@@ -47,6 +47,11 @@ define([
 				});
 			});
 			events.trigger('connect', conn);
+		},
+		receiveMessages: function() {
+			for(var i = 0; i < connections.length; i++) {
+				connections[i].receiveMessages();
+			}
 		}
 	};
 });

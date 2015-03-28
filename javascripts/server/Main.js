@@ -1,14 +1,12 @@
 define([
 	'server/net/GameConnectionServer',
 	'shared/Constants',
-	'server/Constants',
 	'server/Clock',
 	'server/Game',
 	'shared/utils/now'
 ], function(
 	GameConnectionServer,
 	SharedConstants,
-	Constants,
 	Clock,
 	Game,
 	now
@@ -17,15 +15,18 @@ define([
 		//set up the game loop
 		var prevTime = now();
 		var timeToFlush = SharedConstants.SERVER_OUTGOING_MESSAGE_BUFFER_TIME -
-			0.5 / Constants.TARGET_FRAME_RATE;
+			0.5 / SharedConstants.TARGET_FRAME_RATE;
 		function loop() {
 			//calculate time since last loop was run
 			var time = now();
 			var t = time - prevTime;
 			prevTime = time;
 
+			//check for incoming messages for this frame
+			GameConnectionServer.receiveMessages();
+
 			//the game moves forward ~one frame
-			Game.tick(t);
+			Game.tick(1 / SharedConstants.TARGET_FRAME_RATE);
 
 			//every couple of frames any buffered messages are sent out to clients
 			timeToFlush -= t;
@@ -36,11 +37,13 @@ define([
 					}
 				});
 				timeToFlush = SharedConstants.SERVER_OUTGOING_MESSAGE_BUFFER_TIME -
-					0.5 / Constants.TARGET_FRAME_RATE;
+					0.5 / SharedConstants.TARGET_FRAME_RATE;
 			}
+
+			Clock.incrementFrame();
 		}
 
 		//kick off the game loop
-		setInterval(loop, 1000 / Constants.TARGET_FRAME_RATE);
+		setInterval(loop, 1000 / SharedConstants.TARGET_FRAME_RATE);
 	};
 });

@@ -2,12 +2,14 @@ define([
 	'client/net/RawConnection',
 	'client/Clock',
 	'client/Constants',
+	'shared/Constants',
 	'shared/utils/EventHelper',
 	'shared/utils/now'
 ], function(
 	RawConnection,
 	Clock,
 	Constants,
+	SharedConstants,
 	EventHelper,
 	now
 ) {
@@ -16,6 +18,8 @@ define([
 	var events = new EventHelper([ 'sync' ]);
 	var minServerTimeOffset = null;
 	var maxServerTimeOffset = null;
+	var minFrameOffset = null;
+	var maxFrameOffset = null;
 	var adjustedRoundTripTime = null;
 	var pingsSinceRoundTripTimeLowered = 0;
 	var isSynced = false;
@@ -27,6 +31,7 @@ define([
 				if(pings[i].pingId === msg.pingId) {
 					//we got a response to one of our pings
 					var gameTime = msg.gameTime;
+					var frame = msg.frame;
 					pings[i].received = time;
 					var roundTripTime = pings[i].received - pings[i].sent;
 
@@ -42,10 +47,26 @@ define([
 						maxServerTimeOffset = maxGameTime - time;
 						offsetChanged = true;
 					}
-
 					//with a better estimate, we can update the clock (game time is now more accurate)
 					if(offsetChanged) {
 						Clock.setGameTimeOffset((minServerTimeOffset + maxServerTimeOffset) / 2);
+					}
+
+					//set if we can't get a better estiamte of FRAME time
+					var minFrame = frame;
+					var maxFrame = frame + Math.ceil(roundTripTime / SharedConstants.TARGET_FRAME_RATE);
+					offsetChanged = false;
+					if(minFrameOffset === null || minFrameOffset < minFrame - Clock.getBaseFrame()) {
+						minFrameOffset = minFrame - Clock.getBaseFrame();
+						offsetChanged = true;
+					}
+					if(maxFrameOffset === null || maxFrameOffset > maxFrame - Clock.getBaseFrame()) {
+						maxFrameOffset = maxFrame - Clock.getBaseFrame();
+						offsetChanged = true;
+					}
+					//with a better estimate, we can update the clock (game time is now more accurate)
+					if(offsetChanged) {
+						Clock.setFrameOffset(Math.ceil((minFrameOffset + maxFrameOffset) / 2));
 					}
 
 					//may need to increase/decrease delay depending on lag
