@@ -3,7 +3,7 @@ define([
 ], function(
 	copyProperties
 ) {
-	var MOVE_SPEED = 400;
+	var MOVE_SPEED = 200;
 	var STATEFUL_VARS = [ 'x', 'y', 'radius', 'color',
 		'waypointX', 'waypointY', 'waypointMoveDirX', 'waypointMoveDirY' ];
 	function Ball(state) {
@@ -17,11 +17,17 @@ define([
 	Ball.prototype.setState = function(state) {
 		copyProperties(state, this, STATEFUL_VARS);
 	};
-	Ball.prototype.setWaypoint = function(x, y, moveDirX, moveDirY) {
-		this.waypointX = x;
-		this.waypointY = y;
-		this.waypointMoveDirX = moveDirX;
-		this.waypointMoveDirY = moveDirY;
+	Ball.prototype.onInput = function(input, details) {
+		if(input === 'set-waypoint') {
+			this.waypointX = details.x;
+			this.waypointY = details.y;
+			if(details.moveX !== null) {
+				this.waypointMoveDirX = details.moveX;
+			}
+			if(details.moveY !== null) {
+				this.waypointMoveDirY = details.moveY;
+			}
+		}
 	};
 	Ball.prototype.tick = function(t) {
 		//the ball always moves towards the waypoint

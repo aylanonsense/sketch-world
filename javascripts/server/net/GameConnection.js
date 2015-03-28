@@ -15,7 +15,6 @@ define([
 	function GameConnection(socket) {
 		var self = this;
 		this.connId = nextConnId++;
-		this.gameData = {};
 		this._bufferedMessagesToSend = [];
 		this._isConnected = true;
 		this._isSynced = false;
@@ -30,27 +29,29 @@ define([
 		//bind events off of the raw connection
 		this.rawConn = new RawConnection(socket);
 		this.rawConn.on('receive', function(msg) {
-			if(msg.messageType === 'ping') {
-				self.rawConn.send({
-					messageType: 'ping-response',
-					pingId: msg.pingId,
-					gameTime: Clock.getGameTime()
-				});
-			}
-			else if(msg.messageType === 'synced') {
-				self._isSynced = true;
-				self._events.trigger('sync');
-			}
-			else if(msg.messageType === 'desynced') {
-				self._isSynced = false;
-				self._bufferedMessagesToSend = [];
-				self._messagesReceivedEarly.empty();
-				self._events.trigger('desync');
-			}
-			else if(msg.messageType === 'game-messages') {
-				for(var i = 0; i < msg.messages.length; i++) {
-					self._messagesReceivedEarly.enqueue(msg.messages[i],
-						now() + msg.messages[i].gameTime - Clock.getGameTime());
+			if(self._isConnected) {
+				if(msg.messageType === 'ping') {
+					self.rawConn.send({
+						messageType: 'ping-response',
+						pingId: msg.pingId,
+						gameTime: Clock.getGameTime()
+					});
+				}
+				else if(msg.messageType === 'synced') {
+					self._isSynced = true;
+					self._events.trigger('sync');
+				}
+				else if(msg.messageType === 'desynced') {
+					self._isSynced = false;
+					self._bufferedMessagesToSend = [];
+					self._messagesReceivedEarly.empty();
+					self._events.trigger('desync');
+				}
+				else if(msg.messageType === 'game-messages') {
+					for(var i = 0; i < msg.messages.length; i++) {
+						self._messagesReceivedEarly.enqueue(msg.messages[i],
+							now() + msg.messages[i].gameTime - Clock.getGameTime());
+					}
 				}
 			}
 		});

@@ -2,16 +2,18 @@ define([
 	'client/net/GameConnection',
 	'client/Constants',
 	'client/Clock',
-	'client/entity/Ball'
+	'client/entity/Ball',
+	'shared/level/Level'
 ], function(
 	GameConnection,
 	Constants,
 	Clock,
-	Ball
+	Ball,
+	Level
 ) {
+	//set up entities
 	var entities = [];
 	var playableEntity = null;
-
 	function getEntity(id) {
 		for(var i = 0; i < entities.length; i++) {
 			if(entities[i].entityId === id) {
@@ -20,21 +22,49 @@ define([
 		}
 		return null;
 	}
+	function spawnEntity(entity) {
+		if(entity.type === 'Ball') {
+			var ball = new Ball(entity.id, entity.state);
+			entities.push(ball);
+			return ball;
+		}
+		else {
+			return null;
+		}
+	}
+	function despawnEntity(id) {
+		entities = entities.filter(function(entity) {
+			return entity.entityId !== id;
+		});
+		if(playableEntity && playableEntity.entityId === id) {
+			playableEntity = null;
+		}
+	}
+
+	//set up level
+	var level = new Level();
 
 	GameConnection.on('receive', function(msg) {
-		// console.log("Received:", msg);
 		if(msg.messageType === 'game-state') {
-			entities = msg.state.entities.map(function(entity) {
-				if(entity.type === 'Ball') {
-					return new Ball(entity.id, entity.state);
-				}
-				else {
-					return null;
-				}
-			});
+			entities = [];
+			msg.state.entities.forEach(spawnEntity);
+			playableEntity = getEntity(msg.state.playableEntityId);
+			if(playableEntity) {
+				playableEntity.setPlayerControlled(true);
+			}
+			level.setState(msg.state.level);
 		}
-		else if(msg.messageType === 'grant-entity-ownership') {
-			playableEntity = getEntity(msg.entityId);
+		else if(msg.messageType === 'entity-state-update') {
+			getEntity(msg.entity.id).onStateUpdateFromServer(msg.entity.state);
+		}
+		else if(msg.messageType === 'spawn-entity') {
+			spawnEntity(msg.entity);
+		}
+		else if(msg.messageType === 'despawn-entity') {
+			despawnEntity(msg.entityId);
+		}
+		else if(msg.messageType === 'player-input') {
+			getEntity(msg.entityId).onInputFromServer(msg.input, msg.details);
 		}
 	});
 
@@ -48,45 +78,42 @@ define([
 			}
 		},
 		render: function(ctx) {
+			var camera = { x: 0, y: 0 };
 			if(GameConnection.isConnected() && GameConnection.isSynced()) {
-				if(Clock.speed > 1.0) {
-					ctx.fillStyle = '#0f0'; //green -- sped up
-				}
-				else if(Clock.speed < 1.0) {
-					ctx.fillStyle = '#f00'; //red -- slowed down
-				}
-				else {
-					ctx.fillStyle = '#ff0'; //yellow -- normal speed
-				}
+				if(Clock.speed > 1.0) { ctx.fillStyle = '#df0'; } //greener -- sped up
+				else if(Clock.speed < 1.0) { ctx.fillStyle = '#fd0'; } //redder -- slowed down
+				else { ctx.fillStyle = '#ff0'; } //yellow -- normal speed
 			}
-			else if(GameConnection.isConnected()) {
-				ctx.fillStyle = '#f0f'; //magenta -- syncing
-			}
-			else {
-				ctx.fillStyle = '#000'; //black -- not connected
-			}
+			else if(GameConnection.isConnected()) { ctx.fillStyle = '#f0f'; } //magenta -- syncing
+			else { ctx.fillStyle = '#000'; } //black -- not connected
 			ctx.fillRect(0, 0, Constants.CANVAS_WIDTH, Constants.CANVAS_HEIGHT);
 
+			//render level
+			ctx.strokeStyle = '#000';
+			ctx.lineWidth = 1;
+			for(var i = 0; i < level.polygons.length; i++) {
+				var points = level.polygons[i].points;
+				ctx.beginPath();
+				ctx.moveTo(points[points.length - 2], points[points.length - 1]);
+				for(var j = 0; j < points.length - 1; j += 2) {
+					ctx.lineTo(points[j], points[j+1]);
+				}
+				ctx.stroke();
+			}
+
 			//render entities
-			for(var i = 0; i < entities.length; i++) {
-				entities[i].render(ctx, { x: 0, y: 0 });
+			for(i = 0; i < entities.length; i++) {
+				entities[i].render(ctx, camera);
 			}
 		},
-		onMouseEvent: function(evt) {},
+		onMouseEvent: function(evt) {
+			if(playableEntity) {
+				playableEntity.onMouseEvent(evt);
+			}
+		},
 		onKeyboardEvent: function(evt, keyboard) {
 			if(playableEntity) {
-				if(evt.key === 'MOVE_LEFT') {
-					playableEntity.setMoveDirX(evt.isDown ? -1 : (keyboard.MOVE_RIGHT ? 1 : 0));
-				}
-				else if(evt.key === 'MOVE_RIGHT') {
-					playableEntity.setMoveDirX(evt.isDown ? 1 : (keyboard.MOVE_LEFT ? -1 : 0));
-				}
-				else if(evt.key === 'MOVE_UP') {
-					playableEntity.setMoveDirY(evt.isDown ? -1 : (keyboard.MOVE_DOWN ? 1 : 0));
-				}
-				else if(evt.key === 'MOVE_DOWN') {
-					playableEntity.setMoveDirY(evt.isDown ? 1 : (keyboard.MOVE_UP ? -1 : 0));
-				}
+				playableEntity.onKeyboardEvent(evt, keyboard);
 			}
 		}
 	};

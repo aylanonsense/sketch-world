@@ -17,6 +17,27 @@ define([
 				callback(connections[i]);
 			}
 		},
+		forEachSynced: function(callback) {
+			for(var i = 0; i < connections.length; i++) {
+				if(connections[i].isSynced()) {
+					callback(connections[i]);
+				}
+			}
+		},
+		forEachExcept: function(conn, callback) {
+			for(var i = 0; i < connections.length; i++) {
+				if(!connections[i].sameAs(conn)) {
+					callback(connections[i]);
+				}
+			}
+		},
+		forEachSyncedExcept: function(conn, callback) {
+			for(var i = 0; i < connections.length; i++) {
+				if(connections[i].isSynced() && !connections[i].sameAs(conn)) {
+					callback(connections[i]);
+				}
+			}
+		},
 		handleSocket: function(socket) {
 			var conn = new GameConnection(socket);
 			connections.push(conn);
