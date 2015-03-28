@@ -1,12 +1,12 @@
 define([
 	'server/net/GameConnectionServer',
 	'server/Clock',
-	'server/entity/Ball',
+	'server/entity/PhysBall',
 	'shared/level/Level'
 ], function(
 	GameConnectionServer,
 	Clock,
-	Ball,
+	PhysBall,
 	Level
 ) {
 	//set up entities
@@ -36,7 +36,7 @@ define([
 	var timeUntilStateUpdate = 0.0;
 	GameConnectionServer.on('connect', function(conn) {
 		console.log("[" + conn.connId + "] Connected!");
-		var playableEntity = new Ball(100 + 600 * Math.random(), 100 + 400 * Math.random());
+		var playableEntity = new PhysBall(100 + 600 * Math.random(), 100 + 400 * Math.random());
 		entities.push(playableEntity);
 		GameConnectionServer.forEachSyncedExcept(conn, function(conn) {
 			conn.bufferSend({

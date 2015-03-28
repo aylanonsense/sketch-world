@@ -2,13 +2,13 @@ define([
 	'client/net/GameConnection',
 	'client/Constants',
 	'client/Clock',
-	'client/entity/Ball',
+	'client/entity/PhysBall',
 	'shared/level/Level'
 ], function(
 	GameConnection,
 	Constants,
 	Clock,
-	Ball,
+	PhysBall,
 	Level
 ) {
 	//set up entities
@@ -23,8 +23,8 @@ define([
 		return null;
 	}
 	function spawnEntity(entity) {
-		if(entity.type === 'Ball') {
-			var ball = new Ball(entity.id, entity.state);
+		if(entity.type === 'PhysBall') {
+			var ball = new PhysBall(entity.id, entity.state);
 			entities.push(ball);
 			return ball;
 		}
