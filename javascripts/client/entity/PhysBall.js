@@ -1,8 +1,12 @@
 define([
 	'shared/entity/PhysBall',
+	'shared/math/Vector',
+	'client/Constants',
 	'client/net/GameConnection'
 ], function(
 	PhysBallSim,
+	Vector,
+	Constants,
 	GameConnection
 ) {
 	function PhysBall(id, state) {
@@ -11,6 +15,7 @@ define([
 		this.sim = new PhysBallSim(state);
 		this.serverSim = new PhysBallSim(state);
 		this._timeSinceStateUpdate = 0.0;
+		this._graphicalOffset = new Vector(0, 0);
 	}
 	PhysBall.prototype.setPlayerControlled = function(playerControlled) {
 		this._isPlayerControlled = playerControlled;
@@ -23,6 +28,10 @@ define([
 		this.sim.tick(t);
 		this.serverSim.tick(t);
 		this._timeSinceStateUpdate += t;
+		var len = this._graphicalOffset.length();
+		if(len > 0) {
+			this._graphicalOffset.setLength(Math.max(0, len - Math.max(1.75 * len, 25) * t));
+		}
 	};
 	PhysBall.prototype.endOfFrame = function(t) {
 		this.sim.endOfFrame(t);
@@ -64,6 +73,7 @@ define([
 	};
 	PhysBall.prototype.onStateUpdateFromServer = function(state) {
 		if(!this._isPlayerControlled) {
+			this._graphicalOffset.add(this.sim.pos.createVectorTo(state.pos.x, state.pos.y));
 			this.sim.setState(state);
 		}
 		this.serverSim.setState(state);
@@ -76,34 +86,40 @@ define([
 		});
 	};
 	PhysBall.prototype.render = function(ctx, camera) {
-		//draw a "ping" when the entity receives an update
-		if(this._timeSinceStateUpdate < 0.50) {
-			ctx.strokeStyle = 'rgba(0, 0, 0, ' + (1.0 - 2 * this._timeSinceStateUpdate) + ')';
+		if(Constants.DEBUG_DRAW_SERVER_GHOSTS) {
+			//draw a "ping" when the entity receives an update
+			if(this._timeSinceStateUpdate < 0.50) {
+				ctx.strokeStyle = 'rgba(0, 0, 0, ' + (1.0 - 2 * this._timeSinceStateUpdate) + ')';
+				ctx.lineWidth = 1;
+				ctx.beginPath();
+				ctx.arc(this.serverSim.pos.x - camera.x, this.serverSim.pos.y - camera.y,
+					this.serverSim.radius - 1 + 100 * this._timeSinceStateUpdate, 0, 2 * Math.PI);
+				ctx.stroke();
+			}
+
+			//draw hollow circle for PhysBall's current position on the server
+			ctx.strokeStyle = (this.serverSim.isAirborne ? '#f09' :
+				(this.sim.isOnTerraFirma ? '#90f' : '#f7a'));
 			ctx.lineWidth = 1;
 			ctx.beginPath();
 			ctx.arc(this.serverSim.pos.x - camera.x, this.serverSim.pos.y - camera.y,
-				this.serverSim.radius - 1 + 100 * this._timeSinceStateUpdate, 0, 2 * Math.PI);
+				this.serverSim.radius - 0.5, 0, 2 * Math.PI);
 			ctx.stroke();
 		}
 
-		//draw hollow circle for PhysBall's current position on the server
-		ctx.strokeStyle = (this.serverSim.isAirborne ? '#f09' : (this.sim.isOnTerraFirma ? '#90f' : '#f7a'));
-		ctx.lineWidth = 2;
-		ctx.beginPath();
-		ctx.arc(this.serverSim.pos.x - camera.x, this.serverSim.pos.y - camera.y,
-			this.serverSim.radius - 1, 0, 2 * Math.PI);
-		ctx.stroke();
-
 		//draw solid circle for PhysBall's current position on the client
-		ctx.fillStyle = (this.sim.isAirborne ? '#f09' : (this.sim.isOnTerraFirma ? '#90f' : '#f7a'));
+		ctx.fillStyle = (this.sim.isAirborne ? '#f09' :
+			(this.sim.isOnTerraFirma ? '#90f' : '#f7a'));
 		ctx.beginPath();
-		ctx.arc(this.sim.pos.x - camera.x, this.sim.pos.y - camera.y, this.sim.radius, 0, 2 * Math.PI);
+		ctx.arc(this.sim.pos.x - this._graphicalOffset.x - camera.x,
+			this.sim.pos.y - this._graphicalOffset.y - camera.y, this.sim.radius, 0, 2 * Math.PI);
 		ctx.fill();
 
 		//add entity id on solid circle
 		ctx.fillStyle = '#fff';
 		ctx.font = "20px Arial";
-		ctx.fillText("" + this.entityId, this.sim.pos.x - camera.x - 5, this.sim.pos.y - camera.y + 7);
+		ctx.fillText("" + this.entityId, this.sim.pos.x - this._graphicalOffset.x - camera.x - 5,
+			this.sim.pos.y - this._graphicalOffset.y - camera.y + 7);
 	};
 	return PhysBall;
 });
