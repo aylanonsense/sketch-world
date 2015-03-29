@@ -78,6 +78,10 @@ define([
 	return {
 		tick: function(t) {
 			for(var i = 0; i < entities.length; i++) {
+				entities[i].startOfFrame(t);
+			}
+
+			for(i = 0; i < entities.length; i++) {
 				entities[i].tick(t);
 				handleCollisions(entities[i].sim, level, t);
 			}
@@ -93,6 +97,10 @@ define([
 						});
 					}
 				});
+			}
+
+			for(i = 0; i < entities.length; i++) {
+				entities[i].endOfFrame(t);
 			}
 		}
 	};

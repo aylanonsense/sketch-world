@@ -15,10 +15,18 @@ define([
 	PhysBall.prototype.setPlayerControlled = function(playerControlled) {
 		this._isPlayerControlled = playerControlled;
 	};
+	PhysBall.prototype.startOfFrame = function(t) {
+		this.sim.startOfFrame(t);
+		this.serverSim.startOfFrame(t);
+	};
 	PhysBall.prototype.tick = function(t) {
 		this.sim.tick(t);
 		this.serverSim.tick(t);
 		this._timeSinceStateUpdate += t;
+	};
+	PhysBall.prototype.endOfFrame = function(t) {
+		this.sim.endOfFrame(t);
+		this.serverSim.endOfFrame(t);
 	};
 	PhysBall.prototype.onMouseEvent = function(evt) {};
 	PhysBall.prototype.onKeyboardEvent = function(evt, keyboard) {
@@ -70,7 +78,7 @@ define([
 		}
 
 		//draw hollow circle for PhysBall's current position on the server
-		ctx.strokeStyle = '#90f';
+		ctx.strokeStyle = (this.serverSim.isAirborne ? '#f09' : '#90f');
 		ctx.lineWidth = 2;
 		ctx.beginPath();
 		ctx.arc(this.serverSim.pos.x - camera.x, this.serverSim.pos.y - camera.y,
@@ -78,13 +86,12 @@ define([
 		ctx.stroke();
 
 		//draw solid circle for PhysBall's current position on the client
-		ctx.fillStyle = '#90f';
+		ctx.fillStyle = (this.sim.isAirborne ? '#f09' : '#90f');
 		ctx.beginPath();
 		ctx.arc(this.sim.pos.x - camera.x, this.sim.pos.y - camera.y, this.sim.radius, 0, 2 * Math.PI);
 		ctx.fill();
 
 		//add entity id on solid circle
-		ctx.stroke();
 		ctx.fillStyle = '#fff';
 		ctx.font = "20px Arial";
 		ctx.fillText("" + this.entityId, this.sim.pos.x - camera.x - 5, this.sim.pos.y - camera.y + 7);

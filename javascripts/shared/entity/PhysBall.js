@@ -12,6 +12,8 @@ define([
 		this.vel = new Vector(0, 0);
 		this.moveDir = new Vector(0, 0);
 		this.radius = 25;
+		this.isAirborne = true;
+		this._collisionsThisFrame = 0;
 		if(state) {
 			this.setState(state);
 		}
@@ -22,7 +24,8 @@ define([
 			prevPos: this.prevPos.toObject(),
 			vel: this.vel.toObject(),
 			moveDir: this.moveDir.toObject(),
-			radius: this.radius
+			radius: this.radius,
+			isAirborne: this.isAirborne
 		};
 	};
 	PhysBall.prototype.setState = function(state) {
@@ -31,11 +34,15 @@ define([
 		this.vel.set(state.vel);
 		this.moveDir.set(state.moveDir);
 		this.radius = state.radius;
+		this.isAirborne = state.isAirborne;
 	};
 	PhysBall.prototype.onInput = function(input, details) {
 		if(input === 'set-move-dir') {
 			this.moveDir.set(details.x, details.y);
 		}
+	};
+	PhysBall.prototype.startOfFrame = function(t) {
+		this._collisionsThisFrame = 0;
 	};
 	PhysBall.prototype.tick = function(t) {
 		this.prevPos.set(this.pos);
@@ -44,10 +51,14 @@ define([
 		this.vel.add(0, SharedConstants.PLAYER_PHYSICS.GRAVITY * t);
 		this.pos.add(t * (this.vel.x + oldVel.x) / 2, t * (this.vel.y + oldVel.y) / 2);
 	};
+	PhysBall.prototype.endOfFrame = function(t) {
+		this.isAirborne = (this._collisionsThisFrame === 0);
+	};
 	PhysBall.prototype.handleCollision = function(collision, t) {
 		this.pos.set(collision.finalPoint);
 		this.prevPos.set(collision.contactPoint);
 		this.vel.set(collision.finalVel);
+		this._collisionsThisFrame++;
 		/*this.pos = collision.finalPoint;
 		this.prevPos = collision.contactPoint;
 		this.vel = collision.finalVel;

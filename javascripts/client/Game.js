@@ -76,9 +76,17 @@ define([
 		},
 		tick: function(t) {
 			for(var i = 0; i < entities.length; i++) {
+				entities[i].startOfFrame(t);
+			}
+
+			for(i = 0; i < entities.length; i++) {
 				entities[i].tick(t);
 				handleCollisions(entities[i].sim, level, t);
 				handleCollisions(entities[i].serverSim, level, t);
+			}
+
+			for(i = 0; i < entities.length; i++) {
+				entities[i].endOfFrame(t);
 			}
 		},
 		render: function(ctx) {

@@ -30,8 +30,14 @@ define([
 			});
 		});
 	};
+	PhysBall.prototype.startOfFrame = function(t) {
+		this.sim.startOfFrame(t);
+	};
 	PhysBall.prototype.tick = function(t) {
 		this.sim.tick(t);
+	};
+	PhysBall.prototype.endOfFrame = function(t) {
+		this.sim.endOfFrame(t);
 	};
 	return PhysBall;
 });
