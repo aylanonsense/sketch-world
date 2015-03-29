@@ -2,11 +2,13 @@ define([
 	'server/net/GameConnectionServer',
 	'server/Clock',
 	'server/entity/PhysBall',
+	'shared/handleCollisions',
 	'shared/level/Level'
 ], function(
 	GameConnectionServer,
 	Clock,
 	PhysBall,
+	handleCollisions,
 	Level
 ) {
 	//set up entities
@@ -28,15 +30,16 @@ define([
 	//set up level
 	var level = new Level({
 		polygons: [
-			{ id: 4, points: [ 100,100, 200,100, 200,200, 100,200 ] },
-			{ id: 7, points: [ 300,300, 400,500, 500,300 ] }
+			{ id: 0, points: [-200,100, 200,100, 200,150, -200,150 ] },
+			{ id: 1, points: [-550,130, -500,160, -450,180, -400,190,
+				-350,180, -300,160, -250,130, -250,200, -550,200 ] }
 		]
 	});
 
 	var timeUntilStateUpdate = 0.0;
 	GameConnectionServer.on('connect', function(conn) {
 		console.log("[" + conn.connId + "] Connected!");
-		var playableEntity = new PhysBall(100 + 600 * Math.random(), 100 + 400 * Math.random());
+		var playableEntity = new PhysBall(0, 0);
 		entities.push(playableEntity);
 		GameConnectionServer.forEachSyncedExcept(conn, function(conn) {
 			conn.bufferSend({
@@ -76,6 +79,7 @@ define([
 		tick: function(t) {
 			for(var i = 0; i < entities.length; i++) {
 				entities[i].tick(t);
+				handleCollisions(entities[i].sim, level, t);
 			}
 
 			timeUntilStateUpdate -= t;

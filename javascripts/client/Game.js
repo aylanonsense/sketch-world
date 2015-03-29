@@ -3,12 +3,14 @@ define([
 	'client/Constants',
 	'client/Clock',
 	'client/entity/PhysBall',
+	'shared/handleCollisions',
 	'shared/level/Level'
 ], function(
 	GameConnection,
 	Constants,
 	Clock,
 	PhysBall,
+	handleCollisions,
 	Level
 ) {
 	//set up entities
@@ -75,10 +77,15 @@ define([
 		tick: function(t) {
 			for(var i = 0; i < entities.length; i++) {
 				entities[i].tick(t);
+				handleCollisions(entities[i].sim, level, t);
+				handleCollisions(entities[i].serverSim, level, t);
 			}
 		},
 		render: function(ctx) {
-			var camera = { x: 0, y: 0 };
+			var camera = {
+				x: (playableEntity ? playableEntity.sim.pos.x - Constants.CANVAS_WIDTH / 2 : 0),
+				y: (playableEntity ? playableEntity.sim.pos.y - Constants.CANVAS_HEIGHT / 2 : 0)
+			};
 			if(GameConnection.isConnected() && GameConnection.isSynced()) {
 				if(Clock.speed > 1.0) { ctx.fillStyle = '#df0'; } //greener -- sped up
 				else if(Clock.speed < 1.0) { ctx.fillStyle = '#fd0'; } //redder -- slowed down
@@ -94,9 +101,9 @@ define([
 			for(var i = 0; i < level.polygons.length; i++) {
 				var points = level.polygons[i].points;
 				ctx.beginPath();
-				ctx.moveTo(points[points.length - 2], points[points.length - 1]);
+				ctx.moveTo(points[points.length - 2] - camera.x, points[points.length - 1] - camera.y);
 				for(var j = 0; j < points.length - 1; j += 2) {
-					ctx.lineTo(points[j], points[j+1]);
+					ctx.lineTo(points[j] - camera.x, points[j+1] - camera.y);
 				}
 				ctx.stroke();
 			}
