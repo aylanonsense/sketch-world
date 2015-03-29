@@ -42,6 +42,9 @@ define([
 		else if(evt.key === 'MOVE_DOWN') {
 			this._setMoveDir(null, (evt.isDown ? 1 : (keyboard.MOVE_UP ? -1 : 0)));
 		}
+		else if(evt.key === 'JUMP') {
+			this._handleAndSendInput(evt.isDown ? 'jump' : 'end-jump');
+		}
 	};
 	PhysBall.prototype._setMoveDir = function(x, y) {
 		this._handleAndSendInput('set-move-dir', {
@@ -66,6 +69,12 @@ define([
 		this.serverSim.setState(state);
 		this._timeSinceStateUpdate = 0.0;
 	};
+	PhysBall.prototype.sendStateSuggestion = function() {
+		GameConnection.bufferSend({
+			messageType: 'player-state-suggestion',
+			state: this.sim.getState()
+		});
+	};
 	PhysBall.prototype.render = function(ctx, camera) {
 		//draw a "ping" when the entity receives an update
 		if(this._timeSinceStateUpdate < 0.50) {
@@ -78,7 +87,7 @@ define([
 		}
 
 		//draw hollow circle for PhysBall's current position on the server
-		ctx.strokeStyle = (this.serverSim.isAirborne ? '#f09' : '#90f');
+		ctx.strokeStyle = (this.serverSim.isAirborne ? '#f09' : (this.sim.isOnTerraFirma ? '#90f' : '#f7a'));
 		ctx.lineWidth = 2;
 		ctx.beginPath();
 		ctx.arc(this.serverSim.pos.x - camera.x, this.serverSim.pos.y - camera.y,
@@ -86,7 +95,7 @@ define([
 		ctx.stroke();
 
 		//draw solid circle for PhysBall's current position on the client
-		ctx.fillStyle = (this.sim.isAirborne ? '#f09' : '#90f');
+		ctx.fillStyle = (this.sim.isAirborne ? '#f09' : (this.sim.isOnTerraFirma ? '#90f' : '#f7a'));
 		ctx.beginPath();
 		ctx.arc(this.sim.pos.x - camera.x, this.sim.pos.y - camera.y, this.sim.radius, 0, 2 * Math.PI);
 		ctx.fill();

@@ -18,6 +18,9 @@ define([
 			state: this.sim.getState()
 		};
 	};
+	PhysBall.prototype.setState = function(state) {
+		this.sim.setState(state);
+	};
 	PhysBall.prototype.onInputFromClient = function(input, details) {
 		var self = this;
 		this.sim.onInput(input, details);

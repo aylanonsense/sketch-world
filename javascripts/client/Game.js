@@ -70,6 +70,7 @@ define([
 		}
 	});
 
+	var timeUntilSuggestState = 0.0;
 	return {
 		reset: function() {
 			entities = [];
@@ -87,6 +88,14 @@ define([
 
 			for(i = 0; i < entities.length; i++) {
 				entities[i].endOfFrame(t);
+			}
+
+			timeUntilSuggestState -= t;
+			if(timeUntilSuggestState <= 0.0) {
+				this.timeUntilSuggestState = 1.2;
+				if(playableEntity) {
+					playableEntity.sendStateSuggestion();
+				}
 			}
 		},
 		render: function(ctx) {

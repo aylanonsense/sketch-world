@@ -65,7 +65,7 @@ define([
 				vectorTowards: new Vector(-Math.cos(angle), -Math.sin(angle)),
 				stabilityAngle: null,
 				finalPoint: finalPoint,
-				jumpVector: (this.jumpable ? MathUtils.createJumpVector(angle) : null),
+				jumpVector: MathUtils.createJumpVector(angle),
 				finalVel: finalVel
 			};
 		}

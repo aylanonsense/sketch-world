@@ -63,6 +63,11 @@ define([
 			if(msg.messageType === 'player-input') {
 				playableEntity.onInputFromClient(msg.input, msg.details);
 			}
+			else if(msg.messageType === 'player-state-suggestion') {
+				//in a proper client-server architecture we wouldn't allow state suggestions from
+				// the client... but for this game it's fine
+				playableEntity.setState(msg.state);
+			}
 		});
 		conn.on('disconnect', function() {
 			GameConnectionServer.forEachSynced(function(conn) {

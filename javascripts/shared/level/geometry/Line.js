@@ -91,8 +91,8 @@ define([
 					contactPoint: contactPoint.rotate(this._cosAngle, this._sinAngle),
 					finalPoint: finalPoint,
 					counterGravityVector: counterGravityVector,
-					stabilityAngle: (this.slideOnly ? null : this._perpendicularAngle),
-					jumpVector: (this.jumpable ? MathUtils.createJumpVector(this._perpendicularAngle) : null),
+					stabilityAngle: this._perpendicularAngle,
+					jumpVector: MathUtils.createJumpVector(this._perpendicularAngle),
 					vectorTowards: new Vector(-Math.cos(this._perpendicularAngle), -Math.sin(this._perpendicularAngle)),
 					finalVel: finalVel
 				};
