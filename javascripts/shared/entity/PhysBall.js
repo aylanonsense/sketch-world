@@ -15,7 +15,7 @@ define([
 		this.prevPos = new Vector(0, 0);
 		this.vel = new Vector(0, 0);
 		this.moveDir = new Vector(0, 0);
-		this.radius = 25;
+		this.radius = 15.25;
 		this.isAirborne = true;
 		this.isOnTerraFirma = false;
 		this.bufferedJumpTime = 0.0;

@@ -29,7 +29,10 @@ define([
 		this.serverSim.tick(t);
 		this._timeSinceStateUpdate += t;
 		var len = this._graphicalOffset.length();
-		if(len > 0) {
+		if(len > 75) {
+			this._graphicalOffset.zero();
+		}
+		else if(len > 0) {
 			this._graphicalOffset.setLength(Math.max(0, len - Math.max(1.75 * len, 25) * t));
 		}
 	};

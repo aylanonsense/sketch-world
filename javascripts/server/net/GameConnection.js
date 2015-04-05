@@ -102,5 +102,8 @@ define([
 			}
 		}
 	};
+	GameConnection.prototype.disconnect = function() {
+		this.rawConn.disconnect();
+	};
 	return GameConnection;
 });

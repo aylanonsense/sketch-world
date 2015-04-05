@@ -7,6 +7,7 @@ define([
 ) {
 	function Polygon(state) {
 		this.polyId = null;
+		this.tempPolyId = null;
 		this.points = [];
 		this._geometry = [];
 		if(state) {
@@ -16,12 +17,17 @@ define([
 	Polygon.prototype.getState = function() {
 		return {
 			id: this.polyId,
+			tempPolyId: this.tempPolyId,
 			points: this.points
 		};
 	};
 	Polygon.prototype.setState = function(state) {
 		this.polyId = state.id;
+		this.tempPolyId = state.tempPolyId;
 		this.points = state.points;
+		this.recalculateGeometry();
+	};
+	Polygon.prototype.recalculateGeometry = function() {
 		this._geometry = [];
 		for(var i = 0; i < this.points.length - 1; i += 2) {
 			this._geometry.push(new Point(this.points[i], this.points[i + 1]));

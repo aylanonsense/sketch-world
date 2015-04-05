@@ -38,5 +38,8 @@ define([
 	RawConnection.prototype.on = function(eventName, callback) {
 		this._events.on(eventName, callback);
 	};
+	RawConnection.prototype.disconnect = function() {
+		this._socket.disconnect();
+	};
 	return RawConnection;
 });

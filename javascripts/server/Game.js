@@ -3,12 +3,14 @@ define([
 	'server/Clock',
 	'server/entity/PhysBall',
 	'shared/handleCollisions',
+	'server/database/Database',
 	'shared/level/Level'
 ], function(
 	GameConnectionServer,
 	Clock,
 	PhysBall,
 	handleCollisions,
+	Database,
 	Level
 ) {
 	//set up entities
@@ -28,18 +30,28 @@ define([
 	}
 
 	//set up level
-	var level = new Level({
-		polygons: [
-			{ id: 0, points: [-200,100, 200,100, 200,150, -200,150 ] },
-			{ id: 1, points: [-550,130, -500,160, -450,180, -400,190,
-				-350,180, -300,160, -250,130, -250,200, -550,200 ] }
-		]
+	var level = new Level();
+	var levelLoaded = false;
+	Database.getAllPolygons(function(polys) {
+		level.setState({
+			polygons: polys.map(function(poly) {
+				return { id: poly.id, points: poly.points };
+			})
+		});
+		levelLoaded = true;
+		console.log("Level loaded!");
 	});
 
 	var timeUntilStateUpdate = 0.0;
 	GameConnectionServer.on('connect', function(conn) {
+		if(!levelLoaded) {
+			conn.disconnect();
+			console.log("[" + conn.connId + "] Rejected! (level not loaded)");
+			return;
+		}
 		console.log("[" + conn.connId + "] Connected!");
 		var playableEntity = new PhysBall(0, 0);
+		var tempIdLookup = {};
 		entities.push(playableEntity);
 		GameConnectionServer.forEachSyncedExcept(conn, function(conn) {
 			conn.bufferSend({
@@ -67,6 +79,48 @@ define([
 				//in a proper client-server architecture we wouldn't allow state suggestions from
 				// the client... but for this game it's fine
 				playableEntity.setState(msg.state);
+			}
+			else if(msg.messageType === 'add-polygon-request') {
+				var tempClientId = msg.state.tempPolyId;
+				var tempPolygon = level.addTempPolygon(msg.state, 'server');
+				var tempServerId = tempPolygon.tempPolyId;
+				GameConnectionServer.forEachSyncedExcept(conn, function(conn) {
+					conn.bufferSend({
+						messageType: 'add-temp-polygon',
+						state: tempPolygon.getState()
+					});
+				});
+				Database.addPolygon(msg.state, function(polyModel) {
+					var polygon = level.replaceTempPolygon(tempPolygon.tempPolyId, {
+						id: polyModel.id,
+						tempPolyId: tempServerId,
+						points: polyModel.points
+					});
+					tempIdLookup[tempClientId] = polygon.polyId;
+					conn.bufferSend({
+						messageType: 'replace-temp-polygon',
+						tempId: tempClientId,
+						state: polygon.getState()
+					});
+					GameConnectionServer.forEachSyncedExcept(conn, function(conn) {
+						conn.bufferSend({
+							messageType: 'replace-temp-polygon',
+							tempId: tempServerId,
+							state: polygon.getState()
+						});
+					});
+				});
+			}
+			else if(msg.messageType === 'modify-polygon-request') {
+				var polygon = level.getPolygon(msg.state);
+				polygon.setState(msg.state);
+				GameConnectionServer.forEachSyncedExcept(conn, function(conn) {
+					conn.bufferSend({
+						messageType: 'modify-polygon',
+						state: polygon.getState()
+					});
+				});
+				Database.modifyPolygon(msg.state);
 			}
 		});
 		conn.on('disconnect', function() {

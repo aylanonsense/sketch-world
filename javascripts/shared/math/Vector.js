@@ -110,8 +110,15 @@ define(function() {
 		this.y = (this.y + y) / 2;
 		return this;
 	};
-	Vector.prototype.dot = function(vector) {
-		return this.x * vector.x + this.y * vector.y;
+	Vector.prototype.dot = function(x, y) {
+		//can pass a vector argument
+		if(arguments.length === 1) { y = x.y; x = x.x; }
+		return this.x * x + this.y * y;
+	};
+	Vector.prototype.cross = function(x, y) {
+		//can pass a vector argument
+		if(arguments.length === 1) { y = x.y; x = x.x; }
+		return this.x * y - this.y * x;
 	};
 	Vector.prototype.proj = function(vector) {
 		var coeff = ((this.x * vector.x) + (this.y * vector.y)) /
