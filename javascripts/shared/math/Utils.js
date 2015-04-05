@@ -16,6 +16,20 @@ define([
 				(distFromTop > 0 ? 1 : -1) * squareDistFromTop;
 			return new Vector(Math.cos(angle), Math.sin(angle));
 		},
+		linesAreCrossing: function(line1, line2, allowLine2ToTouchLine1End, allowLine1ToTouchLine2End) {
+			var slope1 = line1.start.createVectorTo(line1.end);
+			var slope2 = line2.start.createVectorTo(line2.end);
+			var startDiff = line2.start.clone().subtract(line1.start);
+			var t = startDiff.cross(slope2) / slope1.cross(slope2);
+			var u = startDiff.cross(slope1) / slope1.cross(slope2);
+			if(allowLine2ToTouchLine1End && t === 0 && u === 1) {
+				return false;
+			}
+			if(allowLine1ToTouchLine2End && t === 1 && u === 0) {
+				return false;
+			}
+			return 0 <= t && t <= 1 && 0 <= u && u <= 1;
+		},
 		findCircleLineIntersection: function(circleCenter, circleRadius, lineStart, lineEnd) {
 			//calculate the discriminant
 			var line = lineStart.createVectorTo(lineEnd);

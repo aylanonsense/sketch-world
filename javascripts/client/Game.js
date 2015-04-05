@@ -4,7 +4,7 @@ define([
 	'client/Clock',
 	'client/entity/PhysBall',
 	'shared/handleCollisions',
-	'client/BuildMode',
+	'client/interface/buildmode/BuildMode',
 	'shared/level/Level'
 ], function(
 	GameConnection,

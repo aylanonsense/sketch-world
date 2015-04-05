@@ -1,11 +1,13 @@
 define([
 	'client/Constants',
 	'shared/utils/EventHelper',
+	'shared/math/Utils',
 	'shared/math/Vector',
 	'client/display/Sprite'
 ], function(
 	Constants,
 	EventHelper,
+	MathUtils,
 	Vector,
 	Sprite
 ) {
@@ -72,7 +74,7 @@ define([
 
 			//check to see if the new point would make any lines that cross (bad)
 			for(var i = 0; i < polyLines.length; i++) {
-				if(isCrossing(polyLines[i], line, i === 0, i === polyLines.length - 1)) {
+				if(MathUtils.linesAreCrossing(polyLines[i], line, i === 0, i === polyLines.length - 1)) {
 					return false;
 				}
 			}
@@ -81,21 +83,6 @@ define([
 			polyLines.push(line);
 		}
 		return true;
-	}
-
-	function isCrossing(line1, line2, allowLine2ToTouchLine1End, allowLine1ToTouchLine2End) {
-		var slope1 = line1.start.createVectorTo(line1.end);
-		var slope2 = line2.start.createVectorTo(line2.end);
-		var startDiff = line2.start.clone().subtract(line1.start);
-		var t = startDiff.cross(slope2) / slope1.cross(slope2);
-		var u = startDiff.cross(slope1) / slope1.cross(slope2);
-		if(allowLine2ToTouchLine1End && t === 0 && u === 1) {
-			return false;
-		}
-		if(allowLine1ToTouchLine2End && t === 1 && u === 0) {
-			return false;
-		}
-		return 0 <= t && t <= 1 && 0 <= u && u <= 1;
 	}
 
 	function drawOffsetNumbers(ctx, camera, x, y) {
@@ -117,25 +104,6 @@ define([
 				ctx.fillText("+" + (-y), mousePos.x - camera.x - 10, mousePos.y - camera.y - 15);
 			}
 		}
-	}
-
-	function polyContainsPoint(poly, x, y) {
-		var lineOutOfPoly = {
-			start: new Vector(Math.round(x), Math.round(y) + 0.1234), //add small amount so ray doesn't overlap vertices
-			end: new Vector(Math.round(x) + 9999999, Math.round(y) + 0.1234)
-		};
-		var crossings = 0;
-		var points = poly.points;
-		for(var i = 0; i < poly.points.length - 1; i += 2) {
-			var edge = {
-				start: new Vector(points[i], points[i + 1]),
-				end: new Vector(points[(i + 2) % points.length], points[(i + 3) % points.length])
-			};
-			if(isCrossing(lineOutOfPoly, edge)) {
-				crossings++;
-			}
-		}
-		return (crossings % 2) === 1;
 	}
 
 	function snapMousePos() {
@@ -263,7 +231,7 @@ define([
 					//might be selecting a polygon
 					if(evt.type === 'mousedown') {
 						for(i = 0; i < level.polygons.length; i++) {
-							if(polyContainsPoint(level.polygons[i], snappedMousePos.x, snappedMousePos.y)) {
+							if(level.polygons[i].containsPoint(snappedMousePos.x, snappedMousePos.y)) {
 								selectedPolygon = level.polygons[i];
 								selectedPolygonDragOffset = { x: mousePos.x, y: mousePos.y };
 								return;
@@ -365,17 +333,8 @@ define([
 
 				//draw selected polygon
 				if(selectedPolygon) {
-					var minX = null, maxX = null, minY = null, maxY = null;
-					for(i = 0; i < selectedPolygon.points.length - 1; i += 2) {
-						minX = (minX === null ? selectedPolygon.points[i] :
-							Math.min(selectedPolygon.points[i], minX));
-						maxX = (maxX === null ? selectedPolygon.points[i] :
-							Math.max(selectedPolygon.points[i], maxX));
-						minY = (minY === null ? selectedPolygon.points[i + 1] :
-							Math.min(selectedPolygon.points[i + 1], minY));
-						maxY = (maxY === null ? selectedPolygon.points[i + 1] :
-							Math.max(selectedPolygon.points[i + 1], maxY));
-					}
+					var minX = selectedPolygon.minX, maxX = selectedPolygon.maxX,
+						minY = selectedPolygon.minY, maxY = selectedPolygon.maxY;
 					ctx.strokeStyle = '#06f';
 					ctx.lineWidth = 1;
 					ctx.strokeRect(minX - 2 - 3 - camera.x, minY - 2 - 3 - camera.y, 6, 6);
