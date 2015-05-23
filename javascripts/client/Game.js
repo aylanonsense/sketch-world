@@ -46,23 +46,32 @@ define([
 		}
 	}
 
-	//set up level
-	var level = new Level();
-	BuildMode.setLevel(level);
-	BuildMode.on('draw-poly', function(polyDef) {
-		var polygon = level.addTempPolygon(polyDef, 'client');
+	//add UI handlers
+	BuildMode.on('draw-polygon', function(state) {
+		var polygon = Level.createPolygonAndAssignId(state, 'temp');
 		GameConnection.bufferSend({
-			messageType: 'add-polygon-request',
+			messageType: 'create-polygon-request',
 			state: polygon.getState()
 		});
 	});
-	BuildMode.on('modify-poly', function(polygon) {
+	BuildMode.on('move-polygon', function(info) {
 		GameConnection.bufferSend({
 			messageType: 'modify-polygon-request',
-			state: polygon.getState()
+			modifyType: 'move',
+			x: info.x,
+			y: info.y,
+			state: info.polygon.getState()
+		});
+	});
+	BuildMode.on('delete-polygon', function(polygon) {
+		Level.removePolygonById(polygon.id);
+		GameConnection.bufferSend({
+			messageType: 'delete-polygon-request',
+			id: polygon.id
 		});
 	});
 
+	//set up network handlers
 	GameConnection.on('receive', function(msg) {
 		if(msg.messageType === 'game-state') {
 			entities = [];
@@ -71,7 +80,7 @@ define([
 			if(playableEntity) {
 				playableEntity.setPlayerControlled(true);
 			}
-			level.setState(msg.state.level);
+			Level.setState(msg.state.level);
 		}
 		else if(msg.messageType === 'entity-state-update') {
 			getEntity(msg.entity.id).onStateUpdateFromServer(msg.entity.state);
@@ -85,14 +94,17 @@ define([
 		else if(msg.messageType === 'player-input') {
 			getEntity(msg.entityId).onInputFromServer(msg.input, msg.details);
 		}
-		else if(msg.messageType === 'add-temp-polygon') {
-			level.addPolygon(msg.state);
+		else if(msg.messageType === 'update-polygon-id') {
+			Level.getPolygonById(msg.tempId).id = msg.id;
 		}
-		else if(msg.messageType === 'replace-temp-polygon') {
-			level.replaceTempPolygon(msg.tempId, msg.state);
+		else if(msg.messageType === 'create-polygon') {
+			Level.createPolygon(msg.state);
 		}
-		else if(msg.messageType === 'modify-polygon') {
-			level.getPolygon(msg.state).setState(msg.state);
+		else if(msg.messageType === 'update-polygon-state') {
+			Level.getPolygonById(msg.state.id).setState(msg.state);
+		}
+		else if(msg.messageType === 'delete-polygon') {
+			Level.removePolygonById(msg.id);
 		}
 	});
 
@@ -103,9 +115,8 @@ define([
 			camera.x = 0;
 			camera.y = 0;
 			playableEntity = null;
-			level = new Level();
+			Level.reset();
 			BuildMode.reset();
-			BuildMode.setLevel(level);
 		},
 		tick: function(t) {
 			for(var i = 0; i < entities.length; i++) {
@@ -114,8 +125,8 @@ define([
 
 			for(i = 0; i < entities.length; i++) {
 				entities[i].tick(t);
-				handleCollisions(entities[i].sim, level, t);
-				handleCollisions(entities[i].serverSim, level, t);
+				handleCollisions(entities[i].sim, t);
+				handleCollisions(entities[i].serverSim, t);
 			}
 
 			for(i = 0; i < entities.length; i++) {
@@ -142,12 +153,13 @@ define([
 			else { ctx.fillStyle = '#000'; } //black -- not connected
 			ctx.fillRect(0, 0, Constants.CANVAS_WIDTH, Constants.CANVAS_HEIGHT);
 
-			//render level
+			//render Level
 			ctx.fillStyle = '#fff';
 			ctx.strokeStyle = '#000';
 			ctx.lineWidth = 1;
-			for(var i = 0; i < level.polygons.length; i++) {
-				var points = level.polygons[i].points;
+			var polygons = Level.getPolygons();
+			for(var i = 0; i < polygons.length; i++) {
+				var points = polygons[i].points;
 				ctx.beginPath();
 				ctx.moveTo(points[points.length - 2] - camera.x, points[points.length - 1] - camera.y);
 				for(var j = 0; j < points.length - 1; j += 2) {

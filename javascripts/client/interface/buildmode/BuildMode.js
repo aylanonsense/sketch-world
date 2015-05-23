@@ -26,8 +26,7 @@ define([
 		'doodle': DoodleTool
 	};
 	var buildModeIsOn = true;
-	var level = null;
-	var events = new EventHelper([ 'draw-poly', 'modify-poly' ]);
+	var events = new EventHelper([ 'draw-polygon', 'move-polygon', 'delete-polygon' ]);
 
 	//bind events
 	ToolsPane.on('change-tool', function(tool) {
@@ -36,18 +35,17 @@ define([
 			TOOLS[k].reset();
 		}
 	});
-	ManipulateTool.on('move-poly', function(polygon) {
-		events.trigger('modify-poly', polygon);
+	ManipulateTool.on('move-polygon', function(info) {
+		events.trigger('move-polygon', info);
 	});
-	DrawPolysTool.on('draw-poly', function(partialState) {
-		events.trigger('draw-poly', partialState);
+	ManipulateTool.on('delete-polygon', function(polygon) {
+		events.trigger('delete-polygon', polygon);
+	});
+	DrawPolysTool.on('draw-polygon', function(partialState) {
+		events.trigger('draw-polygon', partialState);
 	});
 
 	return {
-		setLevel: function(lvl) {
-			level = lvl;
-			ManipulateTool.setLevel(lvl);
-		},
 		isOn: function() {
 			return buildModeIsOn;
 		},

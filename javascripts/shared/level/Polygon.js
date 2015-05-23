@@ -11,7 +11,8 @@ define([
 ) {
 	function Polygon(state) {
 		this.id = null;
-		this.tempId = null;
+		this.databaseId = null; //not stateful, server-side only
+		this.needsToBePersisted = false; //not stateful, server-side only
 		this.points = [];
 		this._geometry = [];
 		this._edges = [];
@@ -22,16 +23,21 @@ define([
 	Polygon.prototype.getState = function() {
 		return {
 			id: this.id,
-			tempId: this.tempId,
 			points: this.points
 		};
 	};
 	Polygon.prototype.setState = function(state) {
 		this.id = state.id;
-		this.tempId = state.tempId;
 		this.points = state.points;
 		this.recalculateGeometry();
 	};
+	Polygon.prototype.move = function(x, y) {
+		for(var i = 0; i < this.points.length - 1; i += 2) {
+			this.points[i] += x;
+			this.points[i + 1] += y;
+		}
+		this.recalculateGeometry();
+	}
 	Polygon.prototype.recalculateGeometry = function() {
 		//create geometry (for colliding with the player)
 		this._geometry = [];

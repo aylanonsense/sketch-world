@@ -147,13 +147,15 @@ define([
 		document.onkeydown = onKeyboardEvent;
 		function onKeyboardEvent(evt) {
 			var isDown = (evt.type === 'keydown');
-			if(Constants.KEY_BINDINGS[evt.which] &&
-				keyboard[Constants.KEY_BINDINGS[evt.which]] !== isDown) {
-				keyboard[Constants.KEY_BINDINGS[evt.which]] = isDown;
-				Game.onKeyboardEvent({
-					isDown: isDown,
-					key: Constants.KEY_BINDINGS[evt.which]
-				}, keyboard);
+			if(Constants.KEY_BINDINGS[evt.which]) {
+				evt.preventDefault();
+				if(keyboard[Constants.KEY_BINDINGS[evt.which]] !== isDown) {
+					keyboard[Constants.KEY_BINDINGS[evt.which]] = isDown;
+					Game.onKeyboardEvent({
+						isDown: isDown,
+						key: Constants.KEY_BINDINGS[evt.which]
+					}, keyboard);
+				}
 			}
 		}
 

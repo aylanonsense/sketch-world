@@ -11,7 +11,7 @@ define([
 	var mousePos = { x: 0, y: 0 };
 	var polyPoints = [];
 	var polyLines = [];
-	var events = new EventHelper([ 'draw-poly' ]);
+	var events = new EventHelper([ 'draw-polygon' ]);
 
 	function findValidLineToPoint(x, y) {
 		if(polyPoints.length > 0) {
@@ -82,7 +82,7 @@ define([
 		}
 		else if(doubleArea < 0) {
 			//points do not need to be reversed
-			events.trigger('draw-poly', { points: polyPoints });
+			events.trigger('draw-polygon', { points: polyPoints });
 		}
 		else {
 			//points do need to be reversed
@@ -91,7 +91,7 @@ define([
 				reversedPolyPoints.push(polyPoints[i]);
 				reversedPolyPoints.push(polyPoints[i + 1]);
 			}
-			events.trigger('draw-poly', { points: reversedPolyPoints });
+			events.trigger('draw-polygon', { points: reversedPolyPoints });
 		}
 	}
 

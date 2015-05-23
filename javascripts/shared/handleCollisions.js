@@ -1,12 +1,14 @@
 define([
-	'shared/Constants'
+	'shared/Constants',
+	'shared/level/Level'
 ], function(
-	SharedConstants
+	SharedConstants,
+	Level
 ) {
-	return function(entitySim, level, t) {
+	return function(entitySim, t) {
 		var prevCauses = [];
 		for(var i = 0; i < 6; i++) {
-			var collision = level.checkForCollision(entitySim, SharedConstants.BOUNCE_AMT);
+			var collision = Level.checkForCollision(entitySim, SharedConstants.BOUNCE_AMT);
 			if(collision) {
 				entitySim.handleCollision(collision, t);
 				if(collision.cause.sameAsAny(prevCauses)) {

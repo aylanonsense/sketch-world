@@ -25,7 +25,8 @@ define([
 
 			//define models!
 			var polygonSchema = new mongoose.Schema({
-				points: [ mongoose.Schema.Types.Number ]
+				points: [ mongoose.Schema.Types.Number ],
+				deleted: mongoose.Schema.Types.Boolean
 			});
 			Polygon = mongoose.model('Polygon', polygonSchema);
 		}
@@ -33,15 +34,14 @@ define([
 
 	function getAllPolygons(callback) {
 		onceConnected(function() {
-			Polygon.find({}, function(err, polys) {
+			Polygon.find({ deleted: false }, function(err, polys) {
 				if(err) { throw new Error(err); }
 				if(polys.length > 0) {
 					if(callback) { callback(polys); }
 				}
 				else {
 					//if there are no polygons we initialize the database with some starting polygons
-					(new Polygon({ points: [ 100,100, -100,100, -100,50, 100,50 ] })).save(function(err) {
-						if(err) { throw new Error(err); }
+					createPolygon({ points: [ 100,100, -100,100, -100,50, 100,50 ] }, function() {
 						getAllPolygons(callback);
 					});
 				}
@@ -49,10 +49,11 @@ define([
 		});
 	}
 
-	function addPolygon(state, callback) {
+	function createPolygon(state, callback) {
 		onceConnected(function() {
 			var polygon = new Polygon({
-				points: state.points
+				points: state.points,
+				deleted: false
 			});
 			polygon.save(function(err) {
 				if(err) { throw new Error(err); }
@@ -61,9 +62,9 @@ define([
 		});
 	}
 
-	function modifyPolygon(state, callback) {
+	function savePolygon(id, state, callback) {
 		onceConnected(function() {
-			Polygon.findById(state.id, function(err, polygon) {
+			Polygon.findById(id, function(err, polygon) {
 				if(err) { throw new Error(err); }
 				polygon.points = state.points;
 				polygon.save(function(err) {
@@ -74,9 +75,33 @@ define([
 		});
 	}
 
+	function deletePolygon(id, callback) {
+		onceConnected(function() {
+			Polygon.findById(id, function(err, polygon) {
+				if(err) { throw new Error(err); }
+				polygon.deleted = true;
+				polygon.save(function(err) {
+					if(err) { throw new Error(err); }
+					if(callback) { callback(polygon); }
+				});
+			});
+		});
+	}
+
+	function reset(callback) {
+		onceConnected(function() {
+			Polygon.remove({}, function(err) {
+				if(err) { throw new Error(err); }
+				if(callback) { callback(); }
+			});
+		});
+	}
+
 	return {
 		getAllPolygons: getAllPolygons,
-		addPolygon: addPolygon,
-		modifyPolygon: modifyPolygon
+		createPolygon: createPolygon,
+		savePolygon: savePolygon,
+		deletePolygon: deletePolygon,
+		reset: reset
 	};
 });
